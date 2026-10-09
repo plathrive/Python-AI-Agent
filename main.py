@@ -1,7 +1,7 @@
 import os
 import json
 import argparse
-from call_function import available_functions
+from call_function import *
 from prompts import system_prompt
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -39,8 +39,11 @@ def main():
     print("Hello from python-ai-agent, here's your answer:")
     print("-----------------------------------------------")
     for tool_call in message.tool_calls:
-        function_args = json.loads(tool_call.function.arguments or "{}")
-        print(f"Calling function: {tool_call.function.name}({function_args})")
+        result_message = call_function(tool_call, args.verbose)
+        if result_message['content'] == "":
+            raise Exception("The content is empty")
+        if args.verbose:
+            print(f"-> {result_message['content']}")
     
     if response.usage == None:
         raise RuntimeError("Failed API request, please try again later!")
@@ -51,6 +54,8 @@ def main():
         print(f"Response:\n{response.choices[0].message.content}")
     elif args.verbose == False:
         print(f"Response:\n{response.choices[0].message.content}")
+    print("-----------------------------------------------")
+        
 
 if __name__ == "__main__":
     main()
