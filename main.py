@@ -1,5 +1,7 @@
 import os
+import json
 import argparse
+from call_function import available_functions
 from prompts import system_prompt
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -28,11 +30,18 @@ response = client.chat.completions.create(
     model="openrouter/free",
     messages=messages,
     temperature=0,
+    tools=available_functions
 )
+
+message = response.choices[0].message
 
 def main():
     print("Hello from python-ai-agent, here's your answer:")
     print("-----------------------------------------------")
+    for tool_call in message.tool_calls:
+        function_args = json.loads(tool_call.function.arguments or "{}")
+        print(f"Calling function: {tool_call.function.name}({function_args})")
+    
     if response.usage == None:
         raise RuntimeError("Failed API request, please try again later!")
     elif args.verbose == True:
