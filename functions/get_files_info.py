@@ -13,12 +13,16 @@ def get_files_info(working_directory: str, directory: str = ".") -> str:
             return f'Error: "{directory}" is not a directory'
 
         if valid_target_dir == True:
-            return f'Success: "{directory}" is within the working directory'
+            listing_directory = os.listdir(target_dir)
+            result_list = []
 
-    except ValueError:
-        return "Value error: Please check your values!"
-    except TypeError:
-        return "Type error: Please check your types!"
+            for obj in listing_directory:
+                absolute_obj = os.path.abspath(os.path.join(target_dir, obj))
+                result_list.append(f"- {obj}: file_size={os.path.getsize(absolute_obj)} bytes, is_dir={os.path.isdir(absolute_obj)}")
+            
+            result = "\n".join(result_list)
+            return result
+
     except FileNotFoundError:
         return "File not found error: Please check your directories!"
     except Exception as e:
