@@ -1,5 +1,4 @@
-import os
-import json
+import os, sys, json
 import argparse
 from call_function import *
 from prompts import system_prompt
@@ -22,39 +21,51 @@ parser.add_argument("--verbose", action="store_true", help="Enable verbose outpu
 args = parser.parse_args()
 
 messages = [
-    {"role": "user", "content": system_prompt},
+    {"role": "system", "content": system_prompt},
     {"role": "user", "content": args.user_prompt}
 ]
 
-response = client.chat.completions.create(
-    model="openrouter/free",
-    messages=messages,
-    temperature=0,
-    tools=available_functions
-)
-
-message = response.choices[0].message
-
 def main():
-    print("Hello from python-ai-agent, here's your answer:")
-    print("-----------------------------------------------")
-    for tool_call in message.tool_calls:
-        result_message = call_function(tool_call, args.verbose)
-        if result_message['content'] == "":
-            raise Exception("The content is empty")
-        if args.verbose:
-            print(f"-> {result_message['content']}")
+    got_final_answer = False
+
+    for _ in range(20):
+        response = client.chat.completions.create(
+            model="openrouter/free",
+            messages=messages,
+            temperature=0,
+            tools=available_functions
+        )
+
+        if response.usage == None:
+            raise RuntimeError("Failed API request, please try again later!")
+        elif args.verbose == True:
+            print(f"User prompt: {args.user_prompt}")
+            print(f"Prompt tokens: {response.usage.prompt_tokens}")
+            print(f"Response tokens: {response.usage.completion_tokens}")
+
+        message = response.choices[0].message
+        messages.append(message)
+
+        print("Hello from python-ai-agent, here's your answer:")
+        print("-----------------------------------------------")
+        
+        if message.tool_calls is None:
+            print(response.choices[0].message.content)
+            got_final_answer = True
+            break
+        else:
+            for tool_call in message.tool_calls:     
+                result_message = call_function(tool_call, args.verbose)
+                if result_message['content'] == "":
+                    raise Exception("The content is empty")
+                if args.verbose:
+                    print(f"-> {result_message['content']}")   
+                messages.append(result_message)
+        print("-----------------------------------------------")
     
-    if response.usage == None:
-        raise RuntimeError("Failed API request, please try again later!")
-    elif args.verbose == True:
-        print(f"User prompt: {args.user_prompt}")
-        print(f"Prompt tokens: {response.usage.prompt_tokens}")
-        print(f"Response tokens: {response.usage.completion_tokens}")
-        print(f"Response:\n{response.choices[0].message.content}")
-    elif args.verbose == False:
-        print(f"Response:\n{response.choices[0].message.content}")
-    print("-----------------------------------------------")
+    if not got_final_answer:
+        print("Maximum iterations reached!")
+        sys.exit(1)
         
 
 if __name__ == "__main__":
